@@ -11,8 +11,6 @@ extern ID2D1HwndRenderTarget   *g_pRenderTarget;
 extern ID2D1SolidColorBrush    *g_pBrush;
 extern IWICImagingFactory      *g_pIWICFactory;
 
-extern bool g_isPreview;
-
 template <class T> inline void SafeRelease(T *&ppT)
 {
 	if (ppT)
@@ -56,8 +54,6 @@ void DiscardGraphicsResources();
 HRESULT LoadResourceBitmap();
 
 void OnLButtonDown(int pixelX, int pixelY, DWORD flags);
-
-void OnLButtonUp(int pixelX, int pixelY, DWORD flags);
 
 void OnMove(MoveInfo mov);
 

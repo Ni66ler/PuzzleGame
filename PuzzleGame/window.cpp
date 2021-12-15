@@ -12,8 +12,6 @@
 #include "resource.h"
 
 HWND g_hWnd;
-
-HWND g_hBtnDifficulty;
 HWND g_hBtnRandom, g_hBtnSolve;
 HWND g_hBtnAuto, g_hBtnStop;
 HWND g_hBtnImage;
@@ -22,62 +20,12 @@ bool g_isFullScreen = false;
 RECT g_lastWindowRect;
 LONG_PTR g_lastWindowStyle;
 
-INT_PTR CALLBACK AboutDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg)
-	{
-	case WM_COMMAND:
-		switch (wParam)
-		{
-		case IDOK:
-		case IDCANCEL:
-			EndDialog(hWnd, 0);
-			return TRUE;
-		}
-		break;
-
-	case WM_INITDIALOG:
-		
-	{
-		SendDlgItemMessage(hWnd, IDC_STATIC1, STM_SETICON, (WPARAM)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1)), 0);
-		HWND hWndOwner = GetParent(hWnd);
-		RECT rcDlg, rcOwner;
-
-		GetWindowRect(hWnd, &rcDlg);
-		GetWindowRect(hWndOwner, &rcOwner);
-
-		SetWindowPos(hWnd, HWND_TOP,
-			(rcOwner.left + rcOwner.right - (rcDlg.right - rcDlg.left)) / 2,
-			(rcOwner.top + rcOwner.bottom - (rcDlg.bottom - rcDlg.top)) / 2,
-			0, 0, SWP_NOSIZE);
-	}
-	return TRUE;
-
-	case WM_NOTIFY:
-		switch (((LPNMHDR)lParam)->code)
-		{
-		case NM_CLICK:          // Fall through to the next case.
-
-		case NM_RETURN:
-			// NOT supported MultiByte
-			ShellExecute(NULL, L"open", ((PNMLINK)lParam)->item.szUrl, NULL, NULL, SW_SHOW);
-			return TRUE;
-		}
-		break;
-	}
-
-	return FALSE;
-}
 
 LRESULT CALLBACK BtnWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	switch (uMsg)
 	{
 	case WM_KEYDOWN:
-		SendMessage(g_hWnd, uMsg, wParam, lParam);
-		return 0;
-
-	case WM_KEYUP:
 		SendMessage(g_hWnd, uMsg, wParam, lParam);
 		return 0;
 	}
@@ -110,28 +58,15 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			switch (LOWORD(wParam))
 			{
-			case MBTN_DIFFICULTY:
-				if (g_threadRunning) break;
-				if (g_boardSize == 3) g_boardSize = 4;
-				else if (g_boardSize == 4) g_boardSize = 5;
-				else g_boardSize = 3;
-				CalculateLayout();
-				InvalidateRect(hWnd, NULL, FALSE);
-				break;
-
 			case MBTN_RANDOM:
 				if (g_threadRunning) break;
-				if (g_boardSize == 3) g_board3.random_shuffle();
-				else if (g_boardSize == 4) g_board4.random_shuffle();
-				else g_board5.random_shuffle();
+				g_board4.random_shuffle();
 				InvalidateRect(hWnd, NULL, FALSE);
 				break;
 
 			case MBTN_SOLVE:
 				if (g_threadRunning) break;
-				if (g_boardSize == 3) g_board3.clear();
-				else if (g_boardSize == 4) g_board4.clear();
-				else g_board5.clear();
+				g_board4.clear();
 				InvalidateRect(hWnd, NULL, FALSE);
 				break;
 
@@ -158,10 +93,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&g_pIWICFactory))))
 		{
-			if (FAILED(CoCreateInstance(CLSID_WICImagingFactory1, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&g_pIWICFactory))))
-			{
-				return -1;
-			}
+			return -1;
 		}
 		if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &g_pID2D1Factory)))
 		{
@@ -170,20 +102,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		DPIScale::Initialize();
 
 		{
-			HMENU hMenu = GetSystemMenu(hWnd, FALSE);
-			AppendMenu(hMenu, MF_SEPARATOR, 0, 0);         
-			AppendMenu(hMenu, MF_STRING, MMENU_ABOUT, _T("Puzzle Game..."));
-		}
-		{
 			HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
-
-#ifndef _UNICODE
-#error ComCtl32.dll version 6 is Unicode only. \
-For more information, please visit https://docs.microsoft.com/en-us/windows/desktop/controls/subclassing-overview
-#endif
-			g_hBtnDifficulty = CreateWindow(_T("BUTTON"), _T("Change difficulty"), WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE,
-				0, 0, 0, 0, hWnd, (HMENU)MBTN_DIFFICULTY, hInstance, NULL);
-			SetWindowSubclass(g_hBtnDifficulty, BtnWindowProc, MBTN_DIFFICULTY, 0);
 
 			g_hBtnRandom = CreateWindow(_T("BUTTON"), _T("Shuffle"), WS_CHILD | BS_PUSHBUTTON,
 				0, 0, 0, 0, hWnd, (HMENU)MBTN_RANDOM, hInstance, NULL);
@@ -262,37 +181,11 @@ For more information, please visit https://docs.microsoft.com/en-us/windows/desk
 			if (g_threadRunning) break;
 			OnMove(MoveInfo::MOVE_RIGHT);
 			break;
-
-		case VK_SPACE:
-			if (!g_isPreview)
-			{
-				g_isPreview = true;
-				InvalidateRect(hWnd, NULL, FALSE);
-			}
-			break;
 		}
 		return 0;
-
-	case WM_KEYUP:
-		switch (wParam)
-		{
-		case VK_SPACE:
-			if (g_isPreview)
-			{
-				g_isPreview = false;
-				InvalidateRect(hWnd, NULL, FALSE);
-			}
-			break;
-		}
-		return 0;
-
 	case WM_LBUTTONDOWN:
 		if (g_threadRunning) break;
 		OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), (DWORD)wParam);
-		return 0;
-
-	case WM_LBUTTONUP:
-		OnLButtonUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), (DWORD)wParam);
 		return 0;
 
 	case WM_PAINT:
@@ -302,15 +195,6 @@ For more information, please visit https://docs.microsoft.com/en-us/windows/desk
 	case WM_SIZE:
 		Resize();
 		return 0;
-
-	case WM_SYSCOMMAND:
-		switch (wParam & 0xFFF0)
-		{
-		case MMENU_ABOUT:
-			DialogBox(NULL, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, AboutDialogProc);
-			return 0;
-		}
-		break;
 	}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);

@@ -26,7 +26,7 @@ public:
 
 	~Allocator()
 	{
-		for (DATA_TYPE *p : m_pool) delete[] p;
+		for (DATA_TYPE* p : m_pool) delete[] p;
 	}
 
 	DATA_TYPE* getNew()
@@ -45,33 +45,29 @@ struct Status
 {
 	BoardType board;
 	int f, g;
-	Status *fa;
+	Status* fa;
 
 	void calcF();
 };
 
-template <>
-void Status<Board<3> >::calcF();
 
 template <>
 void Status<Board<4> >::calcF();
 
-template <>
-void Status<Board<5> >::calcF();
 
 template <class T>
 struct Cmp
 {
-	bool operator() (T *const a, T *const b)
+	bool operator() (T* const a, T* const b)
 	{
 		return a->f > b->f;
 	}
 };
 
 template <class BoardType>
-Status<BoardType>* Astar(const BoardType &start, Allocator<Status<BoardType> > &alloc);
+Status<BoardType>* Astar(const BoardType& start, Allocator<Status<BoardType> >& alloc);
 
 template <class BoardType>
-bool GetSteps(const BoardType &start);
+bool GetSteps(const BoardType& start);
 
 DWORD WINAPI AutoComplete(LPVOID lpParam);

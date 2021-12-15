@@ -60,10 +60,10 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="bear.jpg">
+    <Image Include="icon.ico">
       <Filter>Resource files</Filter>
     </Image>
-    <Image Include="icon.ico">
+    <Image Include="disco.jpg">
       <Filter>Resource files</Filter>
     </Image>
   </ItemGroup>

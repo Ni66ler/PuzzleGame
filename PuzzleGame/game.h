@@ -7,9 +7,7 @@ template<int BOARD_SIZE> class Board;
 
 extern int g_boardSize;
 
-extern Board<3> g_board3;
 extern Board<4> g_board4;
-extern Board<5> g_board5;
 
 enum class MoveInfo
 {
@@ -167,27 +165,31 @@ public:
 
 	void random_shuffle()
 	{
-		clear();
-		int pos, rev = 0;
-		for (int i = 0; i < BOARD_SIZE * BOARD_SIZE - 1; ++i)
+		int inversions;
+		do
 		{
-			pos = i + rand() % (BOARD_SIZE * BOARD_SIZE - i);
-			if (pos == BOARD_SIZE * BOARD_SIZE - 1 && m_empty == BOARD_SIZE * BOARD_SIZE - 1)
+			inversions = 0;
+			clear();
+			shuffle();
+			for (int i = 0; i < BOARD_SIZE * BOARD_SIZE - 2; i++)
 			{
-				m_empty = i;
-				rev ^= i ^ BOARD_SIZE;
-				if (BOARD_SIZE % 2 == 0) rev ^= (BOARD_SIZE - 1) ^ (i / BOARD_SIZE);
+				for (int j = i + 1; j < BOARD_SIZE * BOARD_SIZE - 1; j++)
+				{
+					if (m_board[i] > m_board[j]) inversions++;
+				}
 			}
-			else if (pos != i)
-			{
-				rev ^= 1;
-			}
-			std::swap(m_board[i], m_board[pos]);
-		}
-		if (rev & 1)
+			inversions += BOARD_SIZE;
+		} while (inversions % 2 == 1);
+	}
+
+	void shuffle()
+	{
+		int n = BOARD_SIZE * BOARD_SIZE - 1;
+		while (n > 1)
 		{
-			if (m_empty < 2) std::swap(m_board[2], m_board[3]);
-			else std::swap(m_board[0], m_board[1]);
+			int r = rand() % n;
+			n--;
+			std::swap(m_board[r], m_board[n]);
 		}
 	}
 };

@@ -14,7 +14,6 @@ int WINAPI _tWinMain(
 	_In_ int nCmdShow
 )
 {
-	srand(static_cast<unsigned int>(time(NULL)));
 
 	if (FAILED(CoInitialize(NULL)))
 	{
@@ -40,7 +39,7 @@ int WINAPI _tWinMain(
 	g_hWnd = CreateWindowEx(
 		0,                      // Optional window styles
 		CLASS_NAME,             // Window class
-		_T("Puzzle Game"),      // Window text
+		_T("15 Puzzle"),      // Window text
 		WS_OVERLAPPEDWINDOW,    // Window style
 
 		// Size and position

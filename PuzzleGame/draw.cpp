@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "draw.h"
-
 #include "auto.h"
 #include "game.h"
 #include "window.h"
@@ -15,16 +14,15 @@ ID2D1SolidColorBrush	*g_pBrush;
 ID2D1Bitmap             *g_pBitmap;
 IWICImagingFactory      *g_pIWICFactory;
 
-constexpr float BORDER_GAP = 0.1f;
+constexpr float BORDER_GAP = 0.05f;
 constexpr float RECT_SCALE = 16.0f / 9.0f;
-constexpr float BUTTON_GAP = 1.0f / 4.0f;
+constexpr float BUTTON_GAP = 1.0f / 3.0f;
 RECT g_paintRect;
 D2D1_POINT_2F g_boardLTPoint;
 float g_pieceWidth, g_pieceHeight;
 int g_buttonWidth, g_buttonHeight;
 D2D1_POINT_2F g_bmpLTPoint;
 float g_bmpSideLength;
-bool g_isPreview = false;
 
 void CalculateLayout()
 {
@@ -64,7 +62,7 @@ void CalculateLayout()
 		g_pieceHeight = DPIScale::PixelsToDips(height) / g_boardSize;
 
 		g_buttonWidth = width - height - horizontalGap;
-		g_buttonHeight = static_cast<int>(height / (4 + (4 - 1) * BUTTON_GAP));
+		g_buttonHeight = static_cast<int>(height / (3 + (3 - 1) * BUTTON_GAP));
 	}
 }
 
@@ -171,14 +169,14 @@ HRESULT LoadResourceBitmap()
 	}
 	if (SUCCEEDED(hr))
 	{
-		// Lock it to get a system memory pointer.
+		// Lock it to get a system memory pointer to the first byte of the resource data.
 		pImageFile = LockResource(imageResDataHandle);
 
 		hr = pImageFile ? S_OK : E_FAIL;
 	}
 	if (SUCCEEDED(hr))
 	{
-		// Calculate the size.
+		// Calculate the size of the resource.
 		imageFileSize = SizeofResource(NULL, imageResHandle);
 
 		hr = imageFileSize ? S_OK : E_FAIL;
@@ -252,24 +250,13 @@ void OnLButtonDown(int pixelX, int pixelY, DWORD flags)
 	int posX = (pixelX - boardLeft) < 0 ? -1 : (pixelX - boardLeft) / pieceWidth;
 	int posY = (pixelY - boardTop) < 0 ? -1 : (pixelY - boardTop) / pieceHeight;
 	PosInfo pos = { posY, posX };
-	bool res;
-	if (g_boardSize == 3) res = g_board3.click(pos);
-	else if (g_boardSize == 4) res = g_board4.click(pos);
-	else res = g_board5.click(pos);
+	bool res = g_board4.click(pos);
 	if (res) InvalidateRect(g_hWnd, NULL, FALSE);
-}
-
-void OnLButtonUp(int pixelX, int pixelY, DWORD flags)
-{
-	
 }
 
 void OnMove(MoveInfo mov)
 {
-	bool res;
-	if (g_boardSize == 3) res = g_board3.move(mov);
-	else if (g_boardSize == 4) res = g_board4.move(mov);
-	else res = g_board5.move(mov);
+	bool res = g_board4.move(mov);
 	if (res)
 	{
 		InvalidateRect(g_hWnd, NULL, FALSE);
@@ -286,7 +273,7 @@ void OnPaint()
 
 		g_pRenderTarget->BeginDraw();
 
-		g_pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::SkyBlue));
+		g_pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::DarkViolet));
 		PaintBoard();
 
 		hr = g_pRenderTarget->EndDraw();
@@ -305,98 +292,54 @@ void PaintBoard()
 {
 	const float boardBottom = g_boardLTPoint.y + g_pieceHeight * g_boardSize;
 	const float boardRight = g_boardLTPoint.x + g_pieceWidth * g_boardSize;
-
-	if (g_isPreview)
+	float bmpPieceSideLength = g_bmpSideLength / g_boardSize;
+	PosInfo pos;
+	float tmp;
+	for (int row = 0; row < g_boardSize; ++row)
 	{
-		g_pRenderTarget->DrawBitmap(
-			g_pBitmap,
-			D2D1::RectF(
-				g_boardLTPoint.x,
-				g_boardLTPoint.y,
-				boardRight,
-				boardBottom
-			),
-			1.0f,
-			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-			D2D1::RectF(
-				g_bmpLTPoint.x,
-				g_bmpLTPoint.y,
-				g_bmpLTPoint.x + g_bmpSideLength,
-				g_bmpLTPoint.y + g_bmpSideLength
-			)
-		);
-
-		g_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Black));
-		g_pRenderTarget->DrawRectangle(
-			D2D1::RectF(
-				g_boardLTPoint.x,
-				g_boardLTPoint.y,
-				boardRight,
-				boardBottom
-			),
+		for (int col = 0; col < g_boardSize; ++col)
+		{
+			pos = g_board4.getPiecePos({ row, col });
+			if (pos.row != g_boardSize - 1 || pos.col != g_boardSize - 1)
+			{
+				g_pRenderTarget->DrawBitmap(
+					g_pBitmap,
+					D2D1::RectF(
+						g_boardLTPoint.x + col * g_pieceWidth,
+						g_boardLTPoint.y + row * g_pieceHeight,
+						g_boardLTPoint.x + (col + 1) * g_pieceWidth,
+						g_boardLTPoint.y + (row + 1) * g_pieceHeight
+					),
+					1.0f,
+					D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+					D2D1::RectF(
+						g_bmpLTPoint.x + pos.col * bmpPieceSideLength,
+						g_bmpLTPoint.y + pos.row * bmpPieceSideLength,
+						g_bmpLTPoint.x + (pos.col + 1) * bmpPieceSideLength,
+						g_bmpLTPoint.y + (pos.row + 1) * bmpPieceSideLength
+					)
+				);
+			}
+		}
+	}
+	g_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Black));
+	for (int i = 0; i <= g_boardSize; ++i)
+	{
+		tmp = g_boardLTPoint.y + i * g_pieceHeight;
+		g_pRenderTarget->DrawLine(
+			{ g_boardLTPoint.x, tmp },
+			{ boardRight, tmp },
 			g_pBrush
 		);
 	}
-	else
+	for (int i = 0; i <= g_boardSize; ++i)
 	{
-		float bmpPieceSideLength = g_bmpSideLength / g_boardSize;
-		PosInfo pos;
-		float tmp;
-
-		for (int row = 0; row < g_boardSize; ++row)
-		{
-			for (int col = 0; col < g_boardSize; ++col)
-			{
-				if (g_boardSize == 3) pos = g_board3.getPiecePos({ row, col });
-				else if (g_boardSize == 4) pos = g_board4.getPiecePos({ row, col });
-				else pos = g_board5.getPiecePos({ row, col });
-				if (pos.row != g_boardSize - 1 || pos.col != g_boardSize - 1)
-				{
-					g_pRenderTarget->DrawBitmap(
-						g_pBitmap,
-						D2D1::RectF(
-							g_boardLTPoint.x + col * g_pieceWidth,
-							g_boardLTPoint.y + row * g_pieceHeight,
-							g_boardLTPoint.x + (col + 1) * g_pieceWidth,
-							g_boardLTPoint.y + (row + 1) * g_pieceHeight
-						),
-						1.0f,
-						D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-						D2D1::RectF(
-							g_bmpLTPoint.x + pos.col * bmpPieceSideLength,
-							g_bmpLTPoint.y + pos.row * bmpPieceSideLength,
-							g_bmpLTPoint.x + (pos.col + 1) * bmpPieceSideLength,
-							g_bmpLTPoint.y + (pos.row + 1) * bmpPieceSideLength
-						)
-					);
-				}
-			}
-		}
-
-		g_pBrush->SetColor(D2D1::ColorF(D2D1::ColorF::Black));
-
-		// 绘制横线
-		for (int i = 0; i <= g_boardSize; ++i)
-		{
-			tmp = g_boardLTPoint.y + i * g_pieceHeight;
-
-			g_pRenderTarget->DrawLine(
-				{ g_boardLTPoint.x, tmp },
-				{ boardRight, tmp },
-				g_pBrush
-			);
-		}
-		// 绘制竖线
-		for (int i = 0; i <= g_boardSize; ++i)
-		{
-			tmp = g_boardLTPoint.x + i * g_pieceWidth;
-
-			g_pRenderTarget->DrawLine(
-				{ tmp, g_boardLTPoint.y },
-				{ tmp, boardBottom },
-				g_pBrush
-			);
-		}
+		tmp = g_boardLTPoint.x + i * g_pieceWidth;
+		g_pRenderTarget->DrawLine(
+			{ tmp, g_boardLTPoint.y },
+			{ tmp, boardBottom },
+			g_pBrush
+		);
 	}
 }
 
@@ -405,14 +348,7 @@ void PaintButton()
 	int cury = g_paintRect.top;
 	int dy = static_cast<int>(g_buttonHeight * (1 + BUTTON_GAP));
 	bool isSolved;
-
-	MoveWindow(g_hBtnDifficulty, g_paintRect.left, cury, g_buttonWidth, g_buttonHeight, FALSE);
-	InvalidateRect(g_hBtnDifficulty, NULL, FALSE);
-
-	cury += dy;
-	if (g_boardSize == 3) isSolved = g_board3.isFinished();
-	else if (g_boardSize == 4) isSolved = g_board4.isFinished();
-	else isSolved = g_board5.isFinished();
+	isSolved = g_board4.isFinished();
 	if (isSolved)
 	{
 		ShowWindow(g_hBtnRandom, SW_SHOW);

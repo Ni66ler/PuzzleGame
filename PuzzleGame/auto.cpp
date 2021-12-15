@@ -9,12 +9,6 @@ MoveInfo g_steps[STEP_BUFFER_SIZE];
 bool g_threadRunning = false;
 
 template <>
-void Status<Board<3> >::calcF()
-{
-	f = g;
-}
-
-template <>
 void Status<Board<4> >::calcF()
 {
 	int tmp, trow, tcol;
@@ -34,25 +28,6 @@ void Status<Board<4> >::calcF()
 	f += g * 4;
 }
 
-template <>
-void Status<Board<5> >::calcF()
-{
-	int tmp, trow, tcol;
-	f = 0;
-	for (int row = 0; row < 5; ++row)
-	{
-		for (int col = 0; col < 5; ++col)
-		{
-			tmp = board.m_board[row * 5 + col];
-			if (tmp == 5 * 5 - 1) continue;
-			trow = tmp / 5;
-			tcol = tmp % 5;
-			f += abs(row - trow) + abs(col - tcol);
-		}
-	}
-	f *= 9;
-	f += g * 4;
-}
 
 template <class BoardType>
 Status<BoardType>* Astar(const BoardType &start, Allocator<Status<BoardType> > &alloc)
@@ -111,13 +86,7 @@ bool GetSteps(const BoardType &start)
 
 	if (!res) return false;
 
-	g_stepCount = 0;
-	p = res;
-	while (p->fa)
-	{
-		++g_stepCount;
-		p = p->fa;
-	}
+	g_stepCount = res->f / 4;
 
 	int curStep = g_stepCount;
 	int lastEmpty, curEmpty;
@@ -145,10 +114,7 @@ bool GetSteps(const BoardType &start)
 
 DWORD WINAPI AutoComplete(LPVOID lpParam)
 {
-	bool res;
-	if (g_boardSize == 3) res = GetSteps(g_board3);
-	else if (g_boardSize == 4) res = GetSteps(g_board4);
-	else res = GetSteps(g_board5);
+	bool res = GetSteps(g_board4);
 
 	if (res)
 	{
@@ -156,7 +122,7 @@ DWORD WINAPI AutoComplete(LPVOID lpParam)
 		{
 			if (!g_threadRunning) return 0;
 			OnMove(g_steps[i]);
-			if (i != g_stepCount - 1) Sleep(300);
+			Sleep(50);
 		}
 	}
 
